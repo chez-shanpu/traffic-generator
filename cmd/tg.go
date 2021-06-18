@@ -24,28 +24,43 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/chez-shanpu/traffic-generator/pkg/iperf"
+	"github.com/chez-shanpu/traffic-generator/pkg/sts"
 	"os"
+	"time"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "tg",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "tg is a traffic generator",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dstAddr := viper.GetString("tg.dstAddr")
+		dstPort := viper.GetString("tg.dstPort")
+		c := iperf.NewIperfClient(dstAddr, dstPort)
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+		cycle := viper.GetInt("tg.cycle")
+		seed := viper.GetUint64("tg.seed")
+		lambda := viper.GetFloat64("tg.lambda")
+		rate := viper.GetFloat64("tg.rate")
+		p := sts.NewPlanner(cycle, seed, lambda, rate)
+
+		c.BlockCounts = p.CalcPacketCounts()
+		c.WaitDurations = p.CalcWaitDurations()
+
+		res, err := c.GenerateTraffic()
+		if err != nil {
+			return err
+		}
+
+		out := viper.GetString("tg.out")
+		err = c.OutputResults(res, out)
+
+		return err
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -58,41 +73,28 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	flags := rootCmd.Flags()
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
+	flags.Int("cycle", 0, "number of traffic generation cycles")
+	flags.StringP("out", "o", "", "output file path")
+	flags.StringP("dst-addr", "d", "", "destination ip address")
+	flags.StringP("dst-port", "p", "", "destination port number")
+	flags.Float64("lambda", 0, "lambda for poisson distribution")
+	flags.Float64("rate", 0, "rate for exponential distribution")
+	flags.Uint64("seed", uint64(time.Now().UnixNano()), "seed for random values")
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.tg.yaml)")
+	_ = viper.BindPFlag("tg.cycle", flags.Lookup("cycle"))
+	_ = viper.BindPFlag("tg.out", flags.Lookup("out"))
+	_ = viper.BindPFlag("tg.dstAddr", flags.Lookup("dst-addr"))
+	_ = viper.BindPFlag("tg.dstPort", flags.Lookup("dst-port"))
+	_ = viper.BindPFlag("tg.lambda", flags.Lookup("labda"))
+	_ = viper.BindPFlag("tg.rate", flags.Lookup("rate"))
+	_ = viper.BindPFlag("tg.seed", flags.Lookup("seed"))
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	_ = rootCmd.MarkFlagRequired("duration")
+	_ = rootCmd.MarkFlagRequired("dst-addr")
+	_ = rootCmd.MarkFlagRequired("lambda")
+	_ = rootCmd.MarkFlagRequired("rate")
+
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".tg" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".tg")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
-}
