@@ -25,118 +25,133 @@ package iperf
 import (
 	"encoding/csv"
 	"encoding/json"
-	"github.com/chez-shanpu/traffic-generator/pkg/tg"
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
+
+	"github.com/chez-shanpu/traffic-generator/pkg/tg"
+	"github.com/gocarina/gocsv"
 )
 
-const iperf = "iperf3"
+const iperfCmd = "iperf3"
+
+type Param struct {
+	Bitrate          tg.Bitrate          `csv:"Bitrate"`
+	SendSeconds      tg.SendSeconds      `csv:"SendSeconds"`
+	WaitMilliSeconds tg.WaitMilliSeconds `csv:"WaitMilliSeconds"`
+}
 
 type Client struct {
-	DstAddr       string
-	DstPort       string
-	BlockCounts   []tg.PacketCount
-	WaitDurations []tg.WaitDuration
+	Params  []*Param
+	DstAddr string
+	DstPort string
 }
 
-func NewIperfClient(dstAddr, dstPort string) *Client {
+func NewIperfClientFromParamsFile(da, dp string, paramFile string) (*Client, error) {
+	ps, err := parsePramsFile(paramFile)
+	if err != nil {
+		return nil, err
+	}
+
+	c := NewIperfClient(da, dp, ps)
+	return c, err
+}
+
+func parsePramsFile(paramFilePath string) ([]*Param, error) {
+	pFile, err := os.Open(paramFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer pFile.Close()
+
+	var params []*Param
+	err = gocsv.UnmarshalFile(pFile, &params)
+	return params, err
+}
+
+func NewIperfClient(dstAddr, dstPort string, params []*Param) *Client {
 	return &Client{
-		DstAddr:       dstAddr,
-		DstPort:       dstPort,
-		BlockCounts:   nil,
-		WaitDurations: nil,
+		DstAddr: dstAddr,
+		DstPort: dstPort,
+		Params:  params,
 	}
 }
 
-func (c Client) TotalBlockCounts() tg.PacketCount {
-	var total tg.PacketCount
-	for _, b := range c.BlockCounts {
-		total += b
-	}
-	return total
-}
-
-func (c Client) TotalWaitDurations() tg.WaitDuration {
-	var total tg.WaitDuration
-	for _, w := range c.WaitDurations {
-		total += w
-	}
-	return total
-}
-
-func (c Client) GenerateTraffic() (*tg.Result, error) {
-	res := tg.Result{}
-	for i := 0; i < len(c.WaitDurations); i++ {
-		tb, ts, err := c.execIperf(c.BlockCounts[i])
+func (c Client) GenerateTraffic() (tg.Results, error) {
+	var rs tg.Results
+	for i, p := range c.Params {
+		fmt.Printf("Run %d: Bitrate %s, SendSeconds %d\n", i, p.Bitrate, p.SendSeconds)
+		r, err := c.execIperf(p)
 		if err != nil {
 			return nil, err
 		}
-		res.TransferBytes = append(res.TransferBytes, tb)
-		res.TransferSeconds = append(res.TransferSeconds, ts)
-		time.Sleep(time.Duration(c.WaitDurations[i]) * time.Millisecond)
+		rs = append(rs, r)
+		fmt.Printf("sleep %d msec\n", p.WaitMilliSeconds)
+		time.Sleep(time.Duration(p.WaitMilliSeconds) * time.Millisecond)
 	}
 
-	res.TotalTransferBytes = calcTotalTransferBytes(res.TransferBytes)
-	res.TotalTransferSeconds = calcTotalTransferSeconds(res.TransferSeconds)
-
-	return &res, nil
+	return rs, nil
 }
 
-func (c Client) execIperf(pc tg.PacketCount) (tb int64, ts float64, err error) {
+func (c Client) TotalSendSeconds() tg.SendSeconds {
+	var res tg.SendSeconds
+	for _, p := range c.Params {
+		res += p.SendSeconds
+	}
+	return res
+}
+
+func (c Client) TotalWaitMilliSeconds() tg.WaitMilliSeconds {
+	var res tg.WaitMilliSeconds
+	for _, p := range c.Params {
+		res += p.WaitMilliSeconds
+	}
+	return res
+}
+
+func (c Client) execIperf(p *Param) (res *tg.Result, err error) {
 	args := []string{
 		"-c",
 		c.DstAddr,
-		"-f", "K",
-		"-k", strconv.FormatInt(int64(pc), 10),
+		"-t", strconv.FormatInt(int64(p.SendSeconds), 10),
+		"-b", string(p.Bitrate),
 		"-J",
 	}
-
 	if c.DstPort != "" {
 		args = append(args, "-p")
 		args = append(args, c.DstPort)
 	}
 
-	out, err := exec.Command(iperf, args...).Output()
+	out, err := exec.Command(iperfCmd, args...).CombinedOutput()
 	if err != nil {
-		return 0, 0, nil
+		fmt.Printf("[ERROR] Exec command: %s %s", iperfCmd, args)
+		return nil, fmt.Errorf("iperf error: %s ,%s", out, err)
 	}
 
-	tb, ts, err = parseIperfOutput(out)
-	return tb, ts, err
+	sb, ss, err := parseIperfOutput(out)
+	res = &tg.Result{
+		SendByte:   sb,
+		SendSecond: ss,
+	}
+	return res, err
 }
 
-func parseIperfOutput(out []byte) (tb int64, ts float64, err error) {
+func parseIperfOutput(out []byte) (sb int64, ss float64, err error) {
 	var i interface{}
 	err = json.Unmarshal(out, &i)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	tb = int64(i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["bytes"].(float64))
-	ts = i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["seconds"].(float64)
+	sb = int64(i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["bytes"].(float64))
+	ss = i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["seconds"].(float64)
 
-	return tb, ts, nil
+	return sb, ss, nil
 }
 
-func calcTotalTransferBytes(tbs []int64) int64 {
-	total := int64(0)
-	for _, tb := range tbs {
-		total += tb
-	}
-	return total
-}
-
-func calcTotalTransferSeconds(tss []float64) float64 {
-	total := 0.0
-	for _, ts := range tss {
-		total += ts
-	}
-	return total
-}
-
-func (c Client) OutputResults(res *tg.Result, out string) error {
+func (c Client) OutputResults(rs tg.Results, out string) error {
 	var f *os.File
 	var err error
 
@@ -149,27 +164,27 @@ func (c Client) OutputResults(res *tg.Result, out string) error {
 		}
 	}
 
-	err = c.outputResultsCSV(res, f)
+	err = c.outputResultsCSV(rs, f)
 	return err
 }
 
-func (c Client) outputResultsCSV(res *tg.Result, f *os.File) error {
+func (c Client) outputResultsCSV(rs tg.Results, f *os.File) error {
 	w := csv.NewWriter(f)
 	defer w.Flush()
 
-	csvHead := []string{"Cycle", "Transfer", "Bitrate", "Packets", "WaitDuration"}
+	csvHead := []string{"Cycle", "SendByte", "Bitrate", "SendSecond", "WaitMilliSecond"}
 	err := w.Write(csvHead)
 	if err != nil {
 		return err
 	}
 
-	for i := 0; i < len(res.TransferBytes); i++ {
+	for i, r := range rs {
 		var line []string
 		line = append(line, strconv.Itoa(i))
-		line = append(line, strconv.FormatInt(res.TransferBytes[i], 10))
-		line = append(line, strconv.FormatFloat(res.TotalTransferSeconds, 'f', -1, 64))
-		line = append(line, strconv.FormatInt(int64(c.BlockCounts[i]), 10))
-		line = append(line, strconv.FormatFloat(float64(c.WaitDurations[i]), 'f', -1, 64))
+		line = append(line, strconv.FormatInt(r.SendByte, 10))
+		line = append(line, string(c.Params[i].Bitrate))
+		line = append(line, strconv.FormatFloat(r.SendSecond, 'f', -1, 64))
+		line = append(line, strconv.FormatInt(int64(c.Params[i].WaitMilliSeconds), 10))
 		err := w.Write(line)
 		if err != nil {
 			return err
@@ -177,10 +192,10 @@ func (c Client) outputResultsCSV(res *tg.Result, f *os.File) error {
 	}
 	var line []string
 	line = append(line, "Total")
-	line = append(line, strconv.FormatInt(res.TotalTransferBytes, 10))
-	line = append(line, strconv.FormatFloat(res.TotalTransferSeconds, 'f', -1, 64))
-	line = append(line, strconv.FormatInt(int64(c.TotalBlockCounts()), 10))
-	line = append(line, strconv.FormatFloat(float64(c.TotalWaitDurations()), 'f', -1, 64))
+	line = append(line, strconv.FormatInt(rs.TotalSendBytes(), 10))
+	line = append(line, "-")
+	line = append(line, strconv.FormatInt(int64(c.TotalSendSeconds()), 10))
+	line = append(line, strconv.FormatFloat(float64(c.TotalWaitMilliSeconds()), 'f', -1, 64))
 	err = w.Write(line)
 
 	return err

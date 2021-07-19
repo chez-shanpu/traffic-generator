@@ -23,6 +23,10 @@ THE SOFTWARE.
 package sts
 
 import (
+	"encoding/csv"
+	"os"
+	"strconv"
+
 	"github.com/chez-shanpu/traffic-generator/pkg/tg"
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
@@ -33,42 +37,95 @@ type Planner struct {
 	Seed     uint64
 	Lambda   float64
 	Rate     float64
+	Bitrate  tg.Bitrate
 }
 
-func NewPlanner(c int, s uint64, l, r float64) *Planner {
+func NewPlanner(c int, s uint64, l, r float64, b string) *Planner {
 	return &Planner{
 		CycleNum: c,
 		Seed:     s,
 		Lambda:   l,
 		Rate:     r,
+		Bitrate:  tg.Bitrate(b),
 	}
 }
 
-func (p Planner) CalcPacketCounts() []tg.PacketCount {
+func (p Planner) CalcBitrates() []*tg.Bitrate {
+	var bs []*tg.Bitrate
+	for i := 0; i < p.CycleNum; i++ {
+		b := p.Bitrate
+		bs = append(bs, &b)
+	}
+	return bs
+}
+
+func (p Planner) CalcSendSeconds() []*tg.SendSeconds {
 	ps := distuv.Poisson{
 		Lambda: p.Lambda,
 		Src:    rand.NewSource(p.Seed),
 	}
 
-	var pcs []tg.PacketCount
+	var sds []*tg.SendSeconds
 	for i := 0; i < p.CycleNum; i++ {
-		pc := ps.Rand()
-		pcs = append(pcs, tg.PacketCount(pc))
+		sd := tg.SendSeconds(ps.Rand())
+		sds = append(sds, &sd)
 	}
-	return pcs
+	return sds
 }
 
-func (p Planner) CalcWaitDurations() []tg.WaitDuration {
+func (p Planner) CalcWaitSeconds() []*tg.WaitMilliSeconds {
 	e := distuv.Exponential{
 		Rate: p.Rate,
 		Src:  rand.NewSource(p.Seed),
 	}
 
-	var wds []tg.WaitDuration
+	var wds []*tg.WaitMilliSeconds
 	for i := 0; i < p.CycleNum-1; i++ {
-		wd := tg.WaitDuration(e.Rand() * 1000)
-		wds = append(wds, wd)
+		wd := tg.WaitMilliSeconds(e.Rand() * 1000)
+		wds = append(wds, &wd)
 	}
-	wds = append(wds, 0)
+	zero := tg.WaitMilliSeconds(0)
+	wds = append(wds, &zero)
 	return wds
+}
+
+func (p Planner) OutputParams(b []*tg.Bitrate, s []*tg.SendSeconds, w []*tg.WaitMilliSeconds, out string) error {
+	var f *os.File
+	var err error
+
+	if out == "" {
+		f = os.Stdout
+	} else {
+		f, err = os.Create(out)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = p.outputParamsCSV(b, s, w, f)
+	return err
+}
+
+func (p Planner) outputParamsCSV(b []*tg.Bitrate, s []*tg.SendSeconds, w []*tg.WaitMilliSeconds, f *os.File) error {
+	writer := csv.NewWriter(f)
+	defer writer.Flush()
+
+	csvHead := []string{"Cycle", "Bitrate", "SendSeconds", "WaitMilliSeconds"}
+	err := writer.Write(csvHead)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < p.CycleNum; i++ {
+		var line []string
+		line = append(line, strconv.Itoa(i))
+		line = append(line, string(*b[i]))
+		line = append(line, strconv.FormatInt(int64(*s[i]), 10))
+		line = append(line, strconv.FormatInt(int64(*w[i]), 10))
+		err = writer.Write(line)
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }

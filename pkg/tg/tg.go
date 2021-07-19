@@ -23,22 +23,33 @@ THE SOFTWARE.
 package tg
 
 type TrafficGenerator interface {
-	OutputResults(res *Result, out string) error
 	GenerateTraffic() (*Result, error)
+	OutputResults(res *Result, out string) error
 }
 
-type TrafficPlanner interface {
-	CalcPacketCounts() []PacketCount
-	CalcWaitDurations() []WaitDuration
-}
-
-type PacketCount int64
-
-type WaitDuration int64
+type Results []*Result
 
 type Result struct {
-	TotalTransferBytes   int64
-	TotalTransferSeconds float64
-	TransferBytes        []int64
-	TransferSeconds      []float64
+	SendByte   int64
+	SendSecond float64
+}
+
+type Bitrate string
+type SendSeconds int64
+type WaitMilliSeconds int64
+
+func (rs Results) TotalSendBytes() int64 {
+	var res int64
+	for _, r := range rs {
+		res += r.SendByte
+	}
+	return res
+}
+
+func (rs Results) TotalSendSeconds() float64 {
+	var res float64
+	for _, r := range rs {
+		res += r.SendSecond
+	}
+	return res
 }
