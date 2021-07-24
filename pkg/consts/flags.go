@@ -10,4 +10,5 @@ const (
 	ParamFlag   = "param"
 	DstAddrFlag = "dst-addr"
 	DstPortFlag = "dst-port"
+	MssFlag     = "mss"
 )
