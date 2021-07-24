@@ -37,7 +37,8 @@ var runCmd = &cobra.Command{
 		paramFile := viper.GetString(consts.RunCmdParamKey)
 		dstAddr := viper.GetString(consts.RunCmdDstAddrKey)
 		dstPort := viper.GetString(consts.RunCmdDstPortKey)
-		c, err := iperf.NewIperfClientFromParamsFile(dstAddr, dstPort, paramFile)
+		mss := viper.GetInt64(consts.RunCmdMssKey)
+		c, err := iperf.NewIperfClientFromParamsFile(dstAddr, dstPort, mss, paramFile)
 		if err != nil {
 			return err
 		}
@@ -62,11 +63,13 @@ func init() {
 	flags.StringP(consts.DstAddrFlag, "a", "", "destination ip address")
 	flags.StringP(consts.DstPortFlag, "p", "", "destination port number")
 	flags.StringP(consts.OutFlag, "o", "", "path to the result file (if this value is empty the results will be output to stdout)")
+	flags.Int64P(consts.MssFlag, "m", 0, "TCP/SCTP maximum segment size")
 
 	_ = viper.BindPFlag(consts.RunCmdParamKey, flags.Lookup(consts.ParamFlag))
 	_ = viper.BindPFlag(consts.RunCmdDstAddrKey, flags.Lookup(consts.DstAddrFlag))
 	_ = viper.BindPFlag(consts.RunCmdDstPortKey, flags.Lookup(consts.DstPortFlag))
 	_ = viper.BindPFlag(consts.RunCmdOutKey, flags.Lookup(consts.OutFlag))
+	_ = viper.BindPFlag(consts.RunCmdMssKey, flags.Lookup(consts.MssFlag))
 
 	_ = rootCmd.MarkFlagRequired(consts.ParamFlag)
 	_ = rootCmd.MarkFlagRequired(consts.DstAddrFlag)

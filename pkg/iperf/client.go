@@ -44,18 +44,19 @@ type Param struct {
 }
 
 type Client struct {
-	Params  []*Param
-	DstAddr string
-	DstPort string
+	Params             []*Param
+	DstAddr            string
+	DstPort            string
+	MaximumSegmentSize int64
 }
 
-func NewIperfClientFromParamsFile(da, dp string, paramFile string) (*Client, error) {
+func NewIperfClientFromParamsFile(da, dp string, mss int64, paramFile string) (*Client, error) {
 	ps, err := parsePramsFile(paramFile)
 	if err != nil {
 		return nil, err
 	}
 
-	c := NewIperfClient(da, dp, ps)
+	c := NewIperfClient(da, dp, mss, ps)
 	return c, err
 }
 
@@ -71,11 +72,12 @@ func parsePramsFile(paramFilePath string) ([]*Param, error) {
 	return params, err
 }
 
-func NewIperfClient(dstAddr, dstPort string, params []*Param) *Client {
+func NewIperfClient(dstAddr, dstPort string, mss int64, params []*Param) *Client {
 	return &Client{
-		DstAddr: dstAddr,
-		DstPort: dstPort,
-		Params:  params,
+		DstAddr:            dstAddr,
+		DstPort:            dstPort,
+		MaximumSegmentSize: mss,
+		Params:             params,
 	}
 }
 
@@ -122,6 +124,10 @@ func (c Client) execIperf(p *Param) (res *tg.Result, err error) {
 	if c.DstPort != "" {
 		args = append(args, "-p")
 		args = append(args, c.DstPort)
+	}
+	if c.MaximumSegmentSize != 0 {
+		args = append(args, "-M")
+		args = append(args, strconv.FormatInt(c.MaximumSegmentSize, 10))
 	}
 
 	out, err := exec.Command(iperfCmd, args...).CombinedOutput()
