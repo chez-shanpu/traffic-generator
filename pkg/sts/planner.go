@@ -24,6 +24,7 @@ package sts
 
 import (
 	"encoding/csv"
+	"math"
 	"os"
 	"strconv"
 
@@ -67,7 +68,7 @@ func (p Planner) CalcSendSeconds() []*tg.SendSeconds {
 
 	var sds []*tg.SendSeconds
 	for i := 0; i < p.CycleNum; i++ {
-		sd := tg.SendSeconds(ps.Rand())
+		sd := tg.SendSeconds(math.Ceil(ps.Rand()))
 		sds = append(sds, &sd)
 	}
 	return sds
