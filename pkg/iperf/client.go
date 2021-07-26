@@ -135,7 +135,7 @@ func (c Client) execIperf(p *Param) (res *tg.Result, err error) {
 		fmt.Printf("[ERROR] Exec command: %s %s, output: %s, %s", iperfCmd, args, out, err)
 		return &tg.Result{
 			SendByte:   0,
-			SendSecond: -1,
+			SendSecond: 0,
 		}, nil
 	}
 
