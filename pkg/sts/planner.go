@@ -33,20 +33,20 @@ import (
 )
 
 type Planner struct {
-	CycleNum int
-	Seed     uint64
-	Lambda   float64
-	Rate     float64
-	Bitrate  tg.Bitrate
+	CycleNum   int
+	Seed       uint64
+	SendLambda float64
+	WaitLambda float64
+	Bitrate    tg.Bitrate
 }
 
-func NewPlanner(c int, s uint64, l, r float64, b string) *Planner {
+func NewPlanner(c int, s uint64, sl, wl float64, b string) *Planner {
 	return &Planner{
-		CycleNum: c,
-		Seed:     s,
-		Lambda:   l,
-		Rate:     r,
-		Bitrate:  tg.Bitrate(b),
+		CycleNum:   c,
+		Seed:       s,
+		SendLambda: sl,
+		WaitLambda: wl,
+		Bitrate:    tg.Bitrate(b),
 	}
 }
 
@@ -60,9 +60,9 @@ func (p Planner) CalcBitrates() []*tg.Bitrate {
 }
 
 func (p Planner) CalcSendSeconds() []*tg.SendSeconds {
-	ps := distuv.Poisson{
-		Lambda: p.Lambda,
-		Src:    rand.NewSource(p.Seed),
+	ps := distuv.Exponential{
+		Rate: p.SendLambda,
+		Src:  rand.NewSource(p.Seed),
 	}
 
 	var sds []*tg.SendSeconds
@@ -73,9 +73,9 @@ func (p Planner) CalcSendSeconds() []*tg.SendSeconds {
 	return sds
 }
 
-func (p Planner) CalcWaitSeconds() []*tg.WaitMilliSeconds {
+func (p Planner) CalcWaitMilliSeconds() []*tg.WaitMilliSeconds {
 	e := distuv.Exponential{
-		Rate: p.Rate,
+		Rate: p.WaitLambda,
 		Src:  rand.NewSource(p.Seed),
 	}
 
