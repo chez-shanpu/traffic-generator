@@ -132,8 +132,11 @@ func (c Client) execIperf(p *Param) (res *tg.Result, err error) {
 
 	out, err := exec.Command(iperfCmd, args...).CombinedOutput()
 	if err != nil {
-		fmt.Printf("[ERROR] Exec command: %s %s", iperfCmd, args)
-		return nil, fmt.Errorf("iperf error: %s ,%s", out, err)
+		fmt.Printf("[ERROR] Exec command: %s %s, output: %s, %s", iperfCmd, args, out, err)
+		return &tg.Result{
+			SendByte:   0,
+			SendSecond: -1,
+		}, nil
 	}
 
 	sb, ss, err := parseIperfOutput(out)
