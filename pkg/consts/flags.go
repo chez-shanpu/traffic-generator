@@ -11,4 +11,5 @@ const (
 	DstAddrFlag    = "dst-addr"
 	DstPortFlag    = "dst-port"
 	MssFlag        = "mss"
+	UdpFlag        = "udp"
 )

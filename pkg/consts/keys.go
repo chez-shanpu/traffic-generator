@@ -12,4 +12,5 @@ const (
 	RunCmdDstPortKey     = "tg.run.dstPort"
 	RunCmdOutKey         = "tg.run.out"
 	RunCmdMssKey         = "tg.run.mss"
+	RunCmdUdpKey         = "tg.run.udp"
 )
