@@ -13,5 +13,7 @@ const (
 	RunCmdOutKey         = "tg.run.out"
 	RunCmdMssKey         = "tg.run.mss"
 	RunCmdUdpKey         = "tg.run.udp"
+	RunCmdIPv6Key        = "tg.run.ipv6"
+	RunCmdFlowlabelKey   = "tg.run.flowlabel"
 	ServerCmdOutKey      = "tg.server.out"
 )

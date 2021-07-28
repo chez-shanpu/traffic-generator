@@ -39,7 +39,9 @@ var runCmd = &cobra.Command{
 		dstPort := viper.GetString(consts.RunCmdDstPortKey)
 		mss := viper.GetInt64(consts.RunCmdMssKey)
 		udp := viper.GetBool(consts.RunCmdUdpKey)
-		c, err := iperf.NewIperfClientFromParamsFile(dstAddr, dstPort, mss, udp, paramFile)
+		ipv6 := viper.GetBool(consts.RunCmdIPv6Key)
+		flowlabel := viper.GetInt64(consts.RunCmdFlowlabelKey)
+		c, err := iperf.NewIperfClientFromParamsFile(dstAddr, dstPort, mss, udp, ipv6, flowlabel, paramFile)
 		if err != nil {
 			return err
 		}
@@ -66,6 +68,8 @@ func init() {
 	flags.StringP(consts.OutFlag, "o", "", "path to the result file (if this value is empty the results will be output to stdout)")
 	flags.Int64P(consts.MssFlag, "m", 0, "TCP/SCTP maximum segment size")
 	flags.Bool(consts.UdpFlag, false, "Run iperf3 client with udp option")
+	flags.Bool(consts.IPv6Flag, false, "only ipv6")
+	flags.Int64(consts.FlowlabelFlag, -1, "ipv6 flow label")
 
 	_ = viper.BindPFlag(consts.RunCmdParamKey, flags.Lookup(consts.ParamFlag))
 	_ = viper.BindPFlag(consts.RunCmdDstAddrKey, flags.Lookup(consts.DstAddrFlag))
@@ -73,6 +77,8 @@ func init() {
 	_ = viper.BindPFlag(consts.RunCmdOutKey, flags.Lookup(consts.OutFlag))
 	_ = viper.BindPFlag(consts.RunCmdMssKey, flags.Lookup(consts.MssFlag))
 	_ = viper.BindPFlag(consts.RunCmdUdpKey, flags.Lookup(consts.UdpFlag))
+	_ = viper.BindPFlag(consts.RunCmdIPv6Key, flags.Lookup(consts.IPv6Flag))
+	_ = viper.BindPFlag(consts.RunCmdFlowlabelKey, flags.Lookup(consts.FlowlabelFlag))
 
 	_ = rootCmd.MarkFlagRequired(consts.ParamFlag)
 	_ = rootCmd.MarkFlagRequired(consts.DstAddrFlag)
