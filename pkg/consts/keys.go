@@ -13,4 +13,5 @@ const (
 	RunCmdOutKey         = "tg.run.out"
 	RunCmdMssKey         = "tg.run.mss"
 	RunCmdUdpKey         = "tg.run.udp"
+	ServerCmdOutKey      = "tg.server.out"
 )
