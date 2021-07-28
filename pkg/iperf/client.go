@@ -49,15 +49,17 @@ type Client struct {
 	DstPort            string
 	MaximumSegmentSize int64
 	UdpFlag            bool
+	IPv6Flag           bool
+	Flowlabel          int64
 }
 
-func NewIperfClientFromParamsFile(da, dp string, mss int64, udp bool, paramFile string) (*Client, error) {
+func NewIperfClientFromParamsFile(da, dp string, mss int64, udp, ipv6 bool, flowlabel int64, paramFile string) (*Client, error) {
 	ps, err := parsePramsFile(paramFile)
 	if err != nil {
 		return nil, err
 	}
 
-	c := NewIperfClient(da, dp, mss, udp, ps)
+	c := NewIperfClient(da, dp, mss, udp, ipv6, flowlabel, ps)
 	return c, err
 }
 
@@ -73,12 +75,14 @@ func parsePramsFile(paramFilePath string) ([]*Param, error) {
 	return params, err
 }
 
-func NewIperfClient(dstAddr, dstPort string, mss int64, udp bool, params []*Param) *Client {
+func NewIperfClient(dstAddr, dstPort string, mss int64, udp, ipv6 bool, flowlabel int64, params []*Param) *Client {
 	return &Client{
 		DstAddr:            dstAddr,
 		DstPort:            dstPort,
 		MaximumSegmentSize: mss,
 		UdpFlag:            udp,
+		IPv6Flag:           ipv6,
+		Flowlabel:          flowlabel,
 		Params:             params,
 	}
 }
@@ -133,6 +137,13 @@ func (c Client) execIperf(p *Param) (res *tg.Result, err error) {
 	}
 	if c.UdpFlag {
 		args = append(args, "-u")
+	}
+	if c.IPv6Flag {
+		args = append(args, "-6")
+	}
+	if c.Flowlabel > 0 {
+		args = append(args, "-L")
+		args = append(args, strconv.FormatInt(c.Flowlabel, 10))
 	}
 
 	out, err := exec.Command(iperfCmd, args...).CombinedOutput()

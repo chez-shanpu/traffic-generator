@@ -12,4 +12,6 @@ const (
 	DstPortFlag    = "dst-port"
 	MssFlag        = "mss"
 	UdpFlag        = "udp"
+	IPv6Flag       = "ipv6"
+	FlowlabelFlag  = "flowlabel"
 )
