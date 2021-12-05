@@ -25,7 +25,8 @@ package cmd
 import (
 	"time"
 
-	"github.com/chez-shanpu/traffic-generator/pkg/consts"
+	"github.com/chez-shanpu/traffic-generator/pkg/option"
+
 	"github.com/chez-shanpu/traffic-generator/pkg/sts"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,21 +37,13 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Generate traffic data and output",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cycle := viper.GetInt(consts.InitCmdCycleKey)
-		seed := viper.GetUint64(consts.InitCmdSeedKey)
-		slambda := viper.GetFloat64(consts.InitCmdSendLambdaKey)
-		wlambda := viper.GetFloat64(consts.InitCmdWaitLambdaKey)
-		bitrate := viper.GetString(consts.InitCmdBitrateKey)
-		p := sts.NewPlanner(cycle, seed, slambda, wlambda, bitrate)
+		cfg := option.Config{}
+		cfg.Populate()
 
-		bits := p.CalcBitrates()
-		sends := p.CalcSendSeconds()
-		waits := p.CalcWaitMilliSeconds()
+		p := sts.NewPlanner(cfg)
+		ps := p.GenerateTrafficParams()
 
-		out := viper.GetString(consts.InitCmdOutKey)
-		err := p.OutputParams(bits, sends, waits, out)
-
-		return err
+		return ps.Output(cfg.Out)
 	},
 }
 
@@ -58,22 +51,17 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	flags := initCmd.Flags()
-	flags.Int(consts.CycleFlag, 0, "number of traffic generation cycles")
-	flags.Uint64(consts.SeedFlag, uint64(time.Now().UnixNano()), "seed for random values")
-	flags.Float64(consts.SendLambdaFlag, 0, "lambda of exponential distribution for send duration")
-	flags.Float64(consts.WaitLambdaFlag, 0, "lambda of exponential distribution for wait duration")
-	flags.String(consts.BitrateFlag, "0", "traffic bitrate")
-	flags.StringP(consts.OutFlag, "o", "", "output file path")
+	flags.Int(option.Cycle, 0, "number of traffic generation cycles")
+	flags.Uint64(option.Seed, uint64(time.Now().UnixNano()), "seed for random values")
+	flags.Float64(option.SendLambda, 0, "lambda of exponential distribution for send duration")
+	flags.Float64(option.WaitLambda, 0, "lambda of exponential distribution for wait duration")
+	flags.String(option.Bitrate, "0", "traffic bitrate")
+	flags.StringP(option.Out, "o", "", "output file path")
 
-	_ = viper.BindPFlag(consts.InitCmdCycleKey, flags.Lookup(consts.CycleFlag))
-	_ = viper.BindPFlag(consts.InitCmdSeedKey, flags.Lookup(consts.SeedFlag))
-	_ = viper.BindPFlag(consts.InitCmdSendLambdaKey, flags.Lookup(consts.SendLambdaFlag))
-	_ = viper.BindPFlag(consts.InitCmdWaitLambdaKey, flags.Lookup(consts.WaitLambdaFlag))
-	_ = viper.BindPFlag(consts.InitCmdBitrateKey, flags.Lookup(consts.BitrateFlag))
-	_ = viper.BindPFlag(consts.InitCmdOutKey, flags.Lookup(consts.OutFlag))
+	_ = viper.BindPFlags(flags)
 
-	_ = rootCmd.MarkFlagRequired(consts.CycleFlag)
-	_ = rootCmd.MarkFlagRequired(consts.SendLambdaFlag)
-	_ = rootCmd.MarkFlagRequired(consts.WaitLambdaFlag)
-	_ = rootCmd.MarkFlagRequired(consts.BitrateFlag)
+	_ = rootCmd.MarkFlagRequired(option.Cycle)
+	_ = rootCmd.MarkFlagRequired(option.SendLambda)
+	_ = rootCmd.MarkFlagRequired(option.WaitLambda)
+	_ = rootCmd.MarkFlagRequired(option.Bitrate)
 }

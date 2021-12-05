@@ -20,23 +20,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package tg
-
-type TrafficGenerator interface {
-	GenerateTraffic() (*Result, error)
-	OutputResults(res *Result, out string) error
-}
-
-type Results []*Result
+package traffic
 
 type Result struct {
 	SendByte   int64
 	SendSecond float64
 }
 
-type Bitrate string
-type SendSeconds int64
-type WaitMilliSeconds int64
+type Results []*Result
 
 func (rs Results) TotalSendBytes() int64 {
 	var res int64
