@@ -23,8 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"github.com/chez-shanpu/traffic-generator/pkg/consts"
-	"github.com/chez-shanpu/traffic-generator/pkg/iperf"
+	"github.com/chez-shanpu/traffic-generator/pkg/iperf3"
+	"github.com/chez-shanpu/traffic-generator/pkg/option"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -34,14 +34,10 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run traffic generator and out put its results",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		paramFile := viper.GetString(consts.RunCmdParamKey)
-		dstAddr := viper.GetString(consts.RunCmdDstAddrKey)
-		dstPort := viper.GetString(consts.RunCmdDstPortKey)
-		mss := viper.GetInt64(consts.RunCmdMssKey)
-		udp := viper.GetBool(consts.RunCmdUdpKey)
-		ipv6 := viper.GetBool(consts.RunCmdIPv6Key)
-		flowlabel := viper.GetInt64(consts.RunCmdFlowlabelKey)
-		c, err := iperf.NewIperfClientFromParamsFile(dstAddr, dstPort, mss, udp, ipv6, flowlabel, paramFile)
+		cfg := option.Config{}
+		cfg.Populate()
+
+		c, err := iperf3.NewIperfClientFromParamsFile(cfg)
 		if err != nil {
 			return err
 		}
@@ -51,10 +47,7 @@ var runCmd = &cobra.Command{
 			return err
 		}
 
-		out := viper.GetString(consts.RunCmdOutKey)
-		err = c.OutputResults(rs, out)
-
-		return err
+		return c.OutputResults(rs, cfg.Out)
 	},
 }
 
@@ -62,24 +55,17 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 
 	flags := runCmd.Flags()
-	flags.String(consts.ParamFlag, "", "path to the param file")
-	flags.StringP(consts.DstAddrFlag, "a", "", "destination ip address")
-	flags.StringP(consts.DstPortFlag, "p", "", "destination port number")
-	flags.StringP(consts.OutFlag, "o", "", "path to the result file (if this value is empty the results will be output to stdout)")
-	flags.Int64P(consts.MssFlag, "m", 0, "TCP/SCTP maximum segment size")
-	flags.Bool(consts.UdpFlag, false, "Run iperf3 client with udp option")
-	flags.Bool(consts.IPv6Flag, false, "only ipv6")
-	flags.Int64(consts.FlowlabelFlag, -1, "ipv6 flow label")
+	flags.String(option.Param, "", "path to the param file")
+	flags.StringP(option.DstAddr, "a", "", "destination ip address")
+	flags.StringP(option.DstPort, "p", "", "destination port number")
+	flags.StringP(option.Out, "o", "", "path to the result file (if this value is empty the results will be output to stdout)")
+	flags.Int64P(option.Mss, "m", 0, "TCP/SCTP maximum segment size")
+	flags.Bool(option.UDP, false, "Run iperf3 client with udp option")
+	flags.Bool(option.IPv6, false, "only ipv6")
+	flags.Int64(option.Flowlabel, -1, "ipv6 flow label")
 
-	_ = viper.BindPFlag(consts.RunCmdParamKey, flags.Lookup(consts.ParamFlag))
-	_ = viper.BindPFlag(consts.RunCmdDstAddrKey, flags.Lookup(consts.DstAddrFlag))
-	_ = viper.BindPFlag(consts.RunCmdDstPortKey, flags.Lookup(consts.DstPortFlag))
-	_ = viper.BindPFlag(consts.RunCmdOutKey, flags.Lookup(consts.OutFlag))
-	_ = viper.BindPFlag(consts.RunCmdMssKey, flags.Lookup(consts.MssFlag))
-	_ = viper.BindPFlag(consts.RunCmdUdpKey, flags.Lookup(consts.UdpFlag))
-	_ = viper.BindPFlag(consts.RunCmdIPv6Key, flags.Lookup(consts.IPv6Flag))
-	_ = viper.BindPFlag(consts.RunCmdFlowlabelKey, flags.Lookup(consts.FlowlabelFlag))
+	_ = viper.BindPFlags(flags)
 
-	_ = rootCmd.MarkFlagRequired(consts.ParamFlag)
-	_ = rootCmd.MarkFlagRequired(consts.DstAddrFlag)
+	_ = rootCmd.MarkFlagRequired(option.Param)
+	_ = rootCmd.MarkFlagRequired(option.DstAddr)
 }

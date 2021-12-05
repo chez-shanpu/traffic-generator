@@ -34,8 +34,7 @@ var rootCmd = &cobra.Command{
 	Use:   "tg",
 	Short: "tg is a traffic generator",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cmd.Help()
-		return err
+		return cmd.Help()
 	},
 }
 

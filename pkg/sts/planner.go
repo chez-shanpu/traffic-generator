@@ -23,12 +23,11 @@ THE SOFTWARE.
 package sts
 
 import (
-	"encoding/csv"
 	"math"
-	"os"
-	"strconv"
 
-	"github.com/chez-shanpu/traffic-generator/pkg/tg"
+	"github.com/chez-shanpu/traffic-generator/pkg/option"
+
+	"github.com/chez-shanpu/traffic-generator/pkg/traffic"
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 )
@@ -38,95 +37,73 @@ type Planner struct {
 	Seed       uint64
 	SendLambda float64
 	WaitLambda float64
-	Bitrate    tg.Bitrate
+	Bitrate    traffic.Bitrate
 }
 
-func NewPlanner(c int, s uint64, sl, wl float64, b string) *Planner {
+func NewPlanner(cfg option.Config) *Planner {
 	return &Planner{
-		CycleNum:   c,
-		Seed:       s,
-		SendLambda: sl,
-		WaitLambda: wl,
-		Bitrate:    tg.Bitrate(b),
+		CycleNum:   cfg.Cycle,
+		Seed:       cfg.Seed,
+		SendLambda: cfg.SendLambda,
+		WaitLambda: cfg.WaitLambda,
+		Bitrate:    traffic.Bitrate(cfg.Bitrate),
 	}
 }
 
-func (p Planner) CalcBitrates() []*tg.Bitrate {
-	var bs []*tg.Bitrate
+func (p *Planner) GenerateTrafficParams() traffic.Params {
+	var ts traffic.Params
+
+	bits := p.GenerateBitrates()
+	sends := p.GenerateSendSeconds()
+	waits := p.GenerateWaitMilliSeconds()
+
+	for i := 0; i < p.CycleNum; i++ {
+		t := &traffic.Param{
+			Bitrate:          bits[i],
+			SendSeconds:      sends[i],
+			WaitMilliSeconds: waits[i],
+		}
+		ts = append(ts, t)
+	}
+	return ts
+}
+
+func (p Planner) GenerateBitrates() []traffic.Bitrate {
+	var bs []traffic.Bitrate
+
 	for i := 0; i < p.CycleNum; i++ {
 		b := p.Bitrate
-		bs = append(bs, &b)
+		bs = append(bs, b)
 	}
 	return bs
 }
 
-func (p Planner) CalcSendSeconds() []*tg.SendSeconds {
+func (p Planner) GenerateSendSeconds() []traffic.Second {
 	ps := distuv.Exponential{
 		Rate: p.SendLambda,
 		Src:  rand.NewSource(p.Seed),
 	}
 
-	var sds []*tg.SendSeconds
+	var ss []traffic.Second
 	for i := 0; i < p.CycleNum; i++ {
-		sd := tg.SendSeconds(math.Ceil(ps.Rand()))
-		sds = append(sds, &sd)
+		s := traffic.Second(math.Ceil(ps.Rand()))
+		ss = append(ss, s)
 	}
-	return sds
+	return ss
 }
 
-func (p Planner) CalcWaitMilliSeconds() []*tg.WaitMilliSeconds {
+func (p Planner) GenerateWaitMilliSeconds() []traffic.MilliSecond {
 	e := distuv.Exponential{
 		Rate: p.WaitLambda,
 		Src:  rand.NewSource(p.Seed),
 	}
 
-	var wds []*tg.WaitMilliSeconds
+	var ms []traffic.MilliSecond
 	for i := 0; i < p.CycleNum-1; i++ {
-		wd := tg.WaitMilliSeconds(e.Rand() * 1000)
-		wds = append(wds, &wd)
+		m := traffic.MilliSecond(e.Rand() * 1000)
+		ms = append(ms, m)
 	}
-	zero := tg.WaitMilliSeconds(0)
-	wds = append(wds, &zero)
-	return wds
-}
-
-func (p Planner) OutputParams(b []*tg.Bitrate, s []*tg.SendSeconds, w []*tg.WaitMilliSeconds, out string) error {
-	var f *os.File
-	var err error
-
-	if out == "" {
-		f = os.Stdout
-	} else {
-		f, err = os.Create(out)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = p.outputParamsCSV(b, s, w, f)
-	return err
-}
-
-func (p Planner) outputParamsCSV(b []*tg.Bitrate, s []*tg.SendSeconds, w []*tg.WaitMilliSeconds, f *os.File) error {
-	writer := csv.NewWriter(f)
-	defer writer.Flush()
-
-	csvHead := []string{"Cycle", "Bitrate", "SendSeconds", "WaitMilliSeconds"}
-	err := writer.Write(csvHead)
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < p.CycleNum; i++ {
-		var line []string
-		line = append(line, strconv.Itoa(i))
-		line = append(line, string(*b[i]))
-		line = append(line, strconv.FormatInt(int64(*s[i]), 10))
-		line = append(line, strconv.FormatInt(int64(*w[i]), 10))
-		err = writer.Write(line)
-		if err != nil {
-			return err
-		}
-	}
-	return err
+	zero := traffic.MilliSecond(0)
+	ms = append(ms, zero)
+	return ms
 }
