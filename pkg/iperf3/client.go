@@ -32,6 +32,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/chez-shanpu/traffic-generator/pkg/file"
+
 	"github.com/chez-shanpu/traffic-generator/pkg/option"
 
 	"github.com/chez-shanpu/traffic-generator/pkg/traffic"
@@ -107,17 +109,10 @@ func (c Client) GenerateTraffic() (traffic.Results, error) {
 }
 
 func (c Client) OutputResults(rs traffic.Results, out string) error {
-	var f *os.File
-	var err error
-
-	if out == "" {
-		f = os.Stdout
-	} else {
-		if f, err = os.Create(out); err != nil {
-			return err
-		}
+	f, err := file.Create(out)
+	if err != nil {
+		return err
 	}
-
 	return c.OutputResultsCSV(rs, f)
 }
 
