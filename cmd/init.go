@@ -56,7 +56,6 @@ func init() {
 	flags.Float64(option.SendLambda, 0, "lambda of exponential distribution for send duration")
 	flags.Float64(option.WaitLambda, 0, "lambda of exponential distribution for wait duration")
 	flags.String(option.Bitrate, "0", "traffic bitrate")
-	flags.StringP(option.Out, "o", "", "output file path")
 
 	_ = viper.BindPFlags(flags)
 

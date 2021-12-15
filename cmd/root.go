@@ -26,6 +26,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/chez-shanpu/traffic-generator/pkg/option"
+	"github.com/spf13/viper"
+
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +39,13 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
+}
+
+func init() {
+	pflags := rootCmd.PersistentFlags()
+	pflags.StringP(option.Out, "o", "", "path to the output file (if this value is empty the results will be output to stdout)")
+
+	_ = viper.BindPFlags(pflags)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

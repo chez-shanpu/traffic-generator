@@ -5,18 +5,10 @@ GO=go
 GO_VET_OPTS=-v
 GO_TEST_OPTS=-v -race
 
-CMD_NAMES:=$(basename $(wildcard cmd/*.go))
-CMDS:=$(subst cmd,bin,$(CMD_NAMES))
-
-
-.SECONDEXPANSION:
-#bin/%: $(wildcard cmd/*/*.go) $(wildcard cmd/*/*/*.go) $(wildcard pkg/*/*.go) go.mod bin
-bin/%:
-	$(GO) build $(GO_BUILD_OPT) -o $@
-
 
 .PHONY: build
 build: $(CMDS)
+	$(GO) build $(GO_BUILD_OPT) -o ./bin/tg
 
 .PHONY: vet
 vet:
