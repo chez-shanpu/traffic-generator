@@ -4,6 +4,8 @@ import (
 	"encoding/csv"
 	"os"
 	"strconv"
+
+	"github.com/chez-shanpu/traffic-generator/pkg/file"
 )
 
 type Bitrate string
@@ -19,15 +21,9 @@ type Param struct {
 type Params []*Param
 
 func (ps Params) Output(out string) error {
-	var f *os.File
-	var err error
-
-	if out == "" {
-		f = os.Stdout
-	} else {
-		if f, err = os.Create(out); err != nil {
-			return err
-		}
+	f, err := file.Create(out)
+	if err != nil {
+		return err
 	}
 	return ps.OutputCSV(f)
 }

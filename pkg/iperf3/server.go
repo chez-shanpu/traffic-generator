@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/chez-shanpu/traffic-generator/pkg/file"
+
 	"github.com/chez-shanpu/traffic-generator/pkg/traffic"
 )
 
@@ -33,17 +35,10 @@ func (s *Server) Run() (res *traffic.Result, err error) {
 }
 
 func (s *Server) OutputResult(res *traffic.Result, out string) error {
-	var f *os.File
-	var err error
-
-	if out == "" {
-		f = os.Stdout
-	} else {
-		if f, err = os.Create(out); err != nil {
-			return err
-		}
+	f, err := file.Create(out)
+	if err != nil {
+		return err
 	}
-
 	return s.OutputResultCSV(res, f)
 }
 
