@@ -58,14 +58,14 @@ func init() {
 	flags.String(option.Param, "", "path to the param file")
 	flags.StringP(option.DstAddr, "a", "", "destination ip address")
 	flags.StringP(option.DstPort, "p", "", "destination port number")
-	flags.StringP(option.Out, "o", "", "path to the result file (if this value is empty the results will be output to stdout)")
 	flags.Int64P(option.Mss, "m", 0, "TCP/SCTP maximum segment size")
 	flags.Bool(option.UDP, false, "Run iperf3 client with udp option")
 	flags.Bool(option.IPv6, false, "only ipv6")
 	flags.Int64(option.Flowlabel, -1, "ipv6 flow label")
+	flags.StringP(option.WindowSize, "w", "", "window size / socket buffer size")
 
 	_ = viper.BindPFlags(flags)
 
-	_ = rootCmd.MarkFlagRequired(option.Param)
-	_ = rootCmd.MarkFlagRequired(option.DstAddr)
+	_ = runCmd.MarkFlagRequired(option.Param)
+	_ = runCmd.MarkFlagRequired(option.DstAddr)
 }

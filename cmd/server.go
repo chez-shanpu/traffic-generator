@@ -27,7 +27,6 @@ import (
 	"github.com/chez-shanpu/traffic-generator/pkg/option"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // serverCmd represents the server command
@@ -50,9 +49,4 @@ var serverCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
-
-	flags := serverCmd.Flags()
-	flags.StringP(option.Out, "o", "", "path to the result file (if this value is empty the results will be output to stdout)")
-
-	_ = viper.BindPFlags(flags)
 }

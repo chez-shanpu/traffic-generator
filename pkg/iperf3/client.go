@@ -26,6 +26,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -52,6 +53,7 @@ type Client struct {
 	UdpFlag            bool
 	IPv6Flag           bool
 	Flowlabel          int64
+	WindowSize         string
 }
 
 func NewIperfClientFromParamsFile(cfg option.Config) (*Client, error) {
@@ -71,6 +73,7 @@ func NewIperfClient(cfg option.Config, params []*Param) *Client {
 		UdpFlag:            cfg.UDP,
 		IPv6Flag:           cfg.IPv6,
 		Flowlabel:          cfg.Flowlabel,
+		WindowSize:         cfg.WindowSize,
 		Params:             params,
 	}
 }
@@ -189,20 +192,24 @@ func (c Client) makeIperf3Args(p *Param) []string {
 		args = append(args, "-L")
 		args = append(args, strconv.FormatInt(c.Flowlabel, 10))
 	}
+	if c.WindowSize != "" {
+		args = append(args, "-w")
+		args = append(args, c.WindowSize)
+	}
 	return args
 }
 
-func (c Client) execIperf3(args []string) (res *traffic.Result, err error) {
+func (c *Client) execIperf3(args []string) (res *traffic.Result, err error) {
 	out, err := exec.Command(iperf3, args...).CombinedOutput()
 	if err != nil {
-		fmt.Printf("[ERROR] Exec command: %s %s, output: %s, %s", iperf3, args, out, err)
+		fmt.Printf("[ERROR] Exec command: %s %s, output: %s, %s\n", iperf3, args, out, err)
 		return &traffic.Result{
 			SendByte:   0,
 			SendSecond: 0,
 		}, nil
 	}
 
-	sb, ss, err := parseIperfOutput(out)
+	sb, ss, err := c.parseIperfOutput(out)
 	res = &traffic.Result{
 		SendByte:   sb,
 		SendSecond: ss,
@@ -210,14 +217,21 @@ func (c Client) execIperf3(args []string) (res *traffic.Result, err error) {
 	return res, err
 }
 
-func parseIperfOutput(out []byte) (sb int64, ss float64, err error) {
+func (c *Client) parseIperfOutput(out []byte) (sb int64, ss float64, err error) {
 	var i interface{}
-	err = json.Unmarshal(out, &i)
-	if err != nil {
+
+	if err = json.Unmarshal(out, &i); err != nil {
 		return 0, 0, err
 	}
 
-	sb = int64(i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["bytes"].(float64))
-	ss = i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["seconds"].(float64)
+	log.Println(string(out))
+
+	if c.WindowSize == "" {
+		sb = int64(i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["bytes"].(float64))
+		ss = i.(map[string]interface{})["end"].(map[string]interface{})["sum_sent"].(map[string]interface{})["seconds"].(float64)
+	} else {
+		sb = int64(i.(map[string]interface{})["end"].(map[string]interface{})["sum"].(map[string]interface{})["bytes"].(float64))
+		ss = i.(map[string]interface{})["end"].(map[string]interface{})["sum"].(map[string]interface{})["seconds"].(float64)
+	}
 	return sb, ss, nil
 }

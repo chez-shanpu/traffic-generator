@@ -78,7 +78,13 @@ func parseIperfServerOutput(out []byte) (sb int64, ss float64, err error) {
 	}
 
 	sb = calcReceiveBytesFromResultJson(i)
-	ss = i.(map[string]interface{})["end"].(map[string]interface{})["sum"].(map[string]interface{})["seconds"].(float64)
+	if _, ok := i.(map[string]interface{})["end"].(map[string]interface{})["sum_received"].(map[string]interface{}); ok {
+		// tcp
+		ss = i.(map[string]interface{})["end"].(map[string]interface{})["sum_received"].(map[string]interface{})["seconds"].(float64)
+	} else {
+		// udp
+		ss = i.(map[string]interface{})["end"].(map[string]interface{})["sum"].(map[string]interface{})["seconds"].(float64)
+	}
 	return
 }
 

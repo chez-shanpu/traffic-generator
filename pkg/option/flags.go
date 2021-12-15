@@ -16,6 +16,7 @@ const (
 	SendLambda = "send-lambda"
 	UDP        = "udp"
 	WaitLambda = "wait-lambda"
+	WindowSize = "window"
 )
 
 type Config struct {
@@ -32,6 +33,7 @@ type Config struct {
 	SendLambda float64
 	UDP        bool
 	WaitLambda float64
+	WindowSize string
 }
 
 func (c *Config) Populate() {
@@ -48,4 +50,5 @@ func (c *Config) Populate() {
 	c.SendLambda = viper.GetFloat64(SendLambda)
 	c.UDP = viper.GetBool(UDP)
 	c.WaitLambda = viper.GetFloat64(WaitLambda)
+	c.WindowSize = viper.GetString(WindowSize)
 }
