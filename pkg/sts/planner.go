@@ -84,6 +84,15 @@ func (p *Planner) GenerateBitrates() []traffic.Bitrate {
 		bs = p.GenerateRandomBitrates()
 	}
 
+	if len(p.BitrateUnit) != 0 {
+		var newbs []traffic.Bitrate
+		for _, b := range bs {
+			b += traffic.Bitrate(p.BitrateUnit)
+			newbs = append(newbs, b)
+		}
+		bs = newbs
+	}
+
 	return bs
 }
 
@@ -100,15 +109,6 @@ func (p Planner) GenerateRandomBitrates() []traffic.Bitrate {
 			b = 1
 		}
 		bs = append(bs, traffic.Bitrate(strconv.FormatFloat(b, 'f', -1, 64)))
-	}
-
-	if len(p.BitrateUnit) != 0 {
-		var new []traffic.Bitrate
-		for _, b := range bs {
-			b += traffic.Bitrate(p.BitrateUnit)
-			new = append(new, b)
-		}
-		bs = new
 	}
 
 	return bs
