@@ -55,7 +55,9 @@ func init() {
 	flags.Uint64(option.Seed, uint64(time.Now().UnixNano()), "seed for random values")
 	flags.Float64(option.SendLambda, 0, "lambda of exponential distribution for send duration")
 	flags.Float64(option.WaitLambda, 0, "lambda of exponential distribution for wait duration")
-	flags.String(option.Bitrate, "0", "traffic bitrate")
+	flags.Float64(option.Bitrate, 0, "traffic bitrate")
+	flags.Float64(option.BitrateLambda, 0, "lambda of poisson distribution for bitrate")
+	flags.String(option.BitrateUnit, "", "bitrate unit (e.g. K,M,G)")
 
 	_ = viper.BindPFlags(flags)
 
