@@ -24,6 +24,7 @@ package sts
 
 import (
 	"math"
+	"strconv"
 
 	"github.com/chez-shanpu/traffic-generator/pkg/option"
 
@@ -33,20 +34,24 @@ import (
 )
 
 type Planner struct {
-	CycleNum   int
-	Seed       uint64
-	SendLambda float64
-	WaitLambda float64
-	Bitrate    traffic.Bitrate
+	CycleNum      int
+	Seed          uint64
+	SendLambda    float64
+	WaitLambda    float64
+	Bitrate       float64
+	BitrateLambda float64
+	BitrateUnit   string
 }
 
 func NewPlanner(cfg option.Config) *Planner {
 	return &Planner{
-		CycleNum:   cfg.Cycle,
-		Seed:       cfg.Seed,
-		SendLambda: cfg.SendLambda,
-		WaitLambda: cfg.WaitLambda,
-		Bitrate:    traffic.Bitrate(cfg.Bitrate),
+		CycleNum:      cfg.Cycle,
+		Seed:          cfg.Seed,
+		SendLambda:    cfg.SendLambda,
+		WaitLambda:    cfg.WaitLambda,
+		Bitrate:       cfg.Bitrate,
+		BitrateLambda: cfg.BitrateLambda,
+		BitrateUnit:   cfg.BitrateUnit,
 	}
 }
 
@@ -68,13 +73,44 @@ func (p *Planner) GenerateTrafficParams() traffic.Params {
 	return ts
 }
 
-func (p Planner) GenerateBitrates() []traffic.Bitrate {
+func (p *Planner) GenerateBitrates() []traffic.Bitrate {
 	var bs []traffic.Bitrate
 
-	for i := 0; i < p.CycleNum; i++ {
-		b := p.Bitrate
-		bs = append(bs, b)
+	if p.Bitrate != 0 {
+		for i := 0; i < p.CycleNum; i++ {
+			bs = append(bs, traffic.Bitrate(strconv.FormatFloat(p.Bitrate, 'f', -1, 64)))
+		}
+	} else {
+		bs = p.GenerateRandomBitrates()
 	}
+
+	return bs
+}
+
+func (p Planner) GenerateRandomBitrates() []traffic.Bitrate {
+	ps := distuv.Poisson{
+		Lambda: p.BitrateLambda,
+		Src:    rand.NewSource(p.Seed),
+	}
+
+	var bs []traffic.Bitrate
+	for i := 0; i < p.CycleNum; i++ {
+		b := math.Round(ps.Rand())
+		if b < 1 {
+			b = 1
+		}
+		bs = append(bs, traffic.Bitrate(strconv.FormatFloat(b, 'f', -1, 64)))
+	}
+
+	if len(p.BitrateUnit) != 0 {
+		var new []traffic.Bitrate
+		for _, b := range bs {
+			b += traffic.Bitrate(p.BitrateUnit)
+			new = append(new, b)
+		}
+		bs = new
+	}
+
 	return bs
 }
 

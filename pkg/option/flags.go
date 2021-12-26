@@ -3,41 +3,47 @@ package option
 import "github.com/spf13/viper"
 
 const (
-	Bitrate    = "bitrate"
-	Cycle      = "cycle"
-	DstAddr    = "dst-addr"
-	DstPort    = "dst-port"
-	Flowlabel  = "flowlabel"
-	IPv6       = "ipv6"
-	Mss        = "mss"
-	Out        = "out"
-	Param      = "param"
-	Seed       = "seed"
-	SendLambda = "send-lambda"
-	UDP        = "udp"
-	WaitLambda = "wait-lambda"
-	WindowSize = "window"
+	Bitrate       = "bitrate"
+	BitrateLambda = "bitrate-lambda"
+	BitrateUnit   = "bitrate-unit"
+	Cycle         = "cycle"
+	DstAddr       = "dst-addr"
+	DstPort       = "dst-port"
+	Flowlabel     = "flowlabel"
+	IPv6          = "ipv6"
+	Mss           = "mss"
+	Out           = "out"
+	Param         = "param"
+	Seed          = "seed"
+	SendLambda    = "send-lambda"
+	UDP           = "udp"
+	WaitLambda    = "wait-lambda"
+	WindowSize    = "window"
 )
 
 type Config struct {
-	Bitrate    string
-	Cycle      int
-	DstAddr    string
-	DstPort    string
-	Flowlabel  int64
-	IPv6       bool
-	Mss        int64
-	Out        string
-	Param      string
-	Seed       uint64
-	SendLambda float64
-	UDP        bool
-	WaitLambda float64
-	WindowSize string
+	Bitrate       float64
+	BitrateLambda float64
+	BitrateUnit   string
+	Cycle         int
+	DstAddr       string
+	DstPort       string
+	Flowlabel     int64
+	IPv6          bool
+	Mss           int64
+	Out           string
+	Param         string
+	Seed          uint64
+	SendLambda    float64
+	UDP           bool
+	WaitLambda    float64
+	WindowSize    string
 }
 
 func (c *Config) Populate() {
-	c.Bitrate = viper.GetString(Bitrate)
+	c.Bitrate = viper.GetFloat64(Bitrate)
+	c.BitrateLambda = viper.GetFloat64(BitrateLambda)
+	c.BitrateUnit = viper.GetString(BitrateUnit)
 	c.Cycle = viper.GetInt(Cycle)
 	c.DstAddr = viper.GetString(DstAddr)
 	c.DstPort = viper.GetString(DstPort)
