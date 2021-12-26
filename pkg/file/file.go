@@ -15,8 +15,10 @@ func Create(path string) (*os.File, error) {
 	}
 
 	dir, _ := filepath.Split(path)
-	if err = os.MkdirAll(dir, os.ModePerm); err != nil {
-		return nil, err
+	if len(dir) != 0 {
+		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+			return nil, err
+		}
 	}
 	return os.Create(path)
 }
