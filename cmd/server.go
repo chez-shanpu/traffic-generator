@@ -23,9 +23,14 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/chez-shanpu/traffic-generator/pkg/iperf3"
 	"github.com/chez-shanpu/traffic-generator/pkg/option"
-
+	"github.com/chez-shanpu/traffic-generator/pkg/traffic"
 	"github.com/spf13/cobra"
 )
 
@@ -33,17 +38,37 @@ import (
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Run server which handle only one client connection",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		cfg := option.Config{}
 		cfg.Populate()
-
 		s := iperf3.NewServer()
-		res, err := s.Run()
-		if err != nil {
-			return err
-		}
+		errCh := make(chan error, 1)
 
-		return s.OutputResult(res, cfg.Out)
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		defer func() {
+			signal.Stop(sigs)
+		}()
+
+		var ress traffic.Results
+		go func() {
+			for {
+				res, err := s.Run()
+				if err != nil {
+					errCh <- err
+				}
+				ress = append(ress, res)
+			}
+		}()
+
+		select {
+		case <-sigs:
+			if err := s.OutputResult(ress, cfg.Out); err != nil {
+				fmt.Printf("[ERROR]: %v", err)
+			}
+		case err := <-errCh:
+			fmt.Printf("[ERROR]: %v", err)
+		}
 	},
 }
 

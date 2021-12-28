@@ -34,17 +34,24 @@ func (s *Server) Run() (res *traffic.Result, err error) {
 	return res, err
 }
 
-func (s *Server) OutputResult(res *traffic.Result, out string) error {
+func (s *Server) OutputResult(ress traffic.Results, out string) error {
 	f, err := file.Create(out)
 	if err != nil {
 		return err
 	}
-	return s.OutputResultCSV(res, f)
+	return s.OutputResultCSV(ress, f)
 }
 
-func (s *Server) OutputResultCSV(res *traffic.Result, f *os.File) error {
+func (s *Server) OutputResultCSV(ress traffic.Results, f *os.File) error {
 	w := csv.NewWriter(f)
 	defer w.Flush()
+
+	var totalReceiveByte int64
+	var totalSendSeconds float64
+	for _, res := range ress {
+		totalReceiveByte += res.SendByte
+		totalSendSeconds += res.SendSecond
+	}
 
 	csvHead := []string{"TotalReceiveBytes", "SendSeconds"}
 	if err := w.Write(csvHead); err != nil {
@@ -52,8 +59,8 @@ func (s *Server) OutputResultCSV(res *traffic.Result, f *os.File) error {
 	}
 
 	var line []string
-	line = append(line, strconv.FormatInt(res.SendByte, 10))
-	line = append(line, strconv.FormatFloat(res.SendSecond, 'f', -1, 64))
+	line = append(line, strconv.FormatInt(totalReceiveByte, 10))
+	line = append(line, strconv.FormatFloat(totalSendSeconds, 'f', -1, 64))
 	return w.Write(line)
 }
 
