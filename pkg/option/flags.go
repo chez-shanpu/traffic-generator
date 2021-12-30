@@ -16,8 +16,10 @@ const (
 	Param         = "param"
 	Seed          = "seed"
 	SendLambda    = "send-lambda"
+	SendSeconds   = "send-seconds"
 	UDP           = "udp"
 	WaitLambda    = "wait-lambda"
+	WaitSeconds   = "wait-seconds"
 	WindowSize    = "window"
 )
 
@@ -35,8 +37,10 @@ type Config struct {
 	Param         string
 	Seed          uint64
 	SendLambda    float64
+	SendSeconds   int64
 	UDP           bool
 	WaitLambda    float64
+	WaitSeconds   int64
 	WindowSize    string
 }
 
@@ -54,7 +58,9 @@ func (c *Config) Populate() {
 	c.Param = viper.GetString(Param)
 	c.Seed = viper.GetUint64(Seed)
 	c.SendLambda = viper.GetFloat64(SendLambda)
+	c.SendSeconds = viper.GetInt64(SendSeconds)
 	c.UDP = viper.GetBool(UDP)
 	c.WaitLambda = viper.GetFloat64(WaitLambda)
+	c.WaitSeconds = viper.GetInt64(WaitSeconds)
 	c.WindowSize = viper.GetString(WindowSize)
 }
