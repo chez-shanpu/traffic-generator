@@ -37,7 +37,9 @@ type Planner struct {
 	CycleNum      int
 	Seed          uint64
 	SendLambda    float64
+	SendSeconds   int64
 	WaitLambda    float64
+	WaitSeconds   int64
 	Bitrate       float64
 	BitrateLambda float64
 	BitrateUnit   string
@@ -48,7 +50,9 @@ func NewPlanner(cfg option.Config) *Planner {
 		CycleNum:      cfg.Cycle,
 		Seed:          cfg.Seed,
 		SendLambda:    cfg.SendLambda,
+		SendSeconds:   cfg.SendSeconds,
 		WaitLambda:    cfg.WaitLambda,
+		WaitSeconds:   cfg.WaitSeconds,
 		Bitrate:       cfg.Bitrate,
 		BitrateLambda: cfg.BitrateLambda,
 		BitrateUnit:   cfg.BitrateUnit,
@@ -115,6 +119,20 @@ func (p Planner) GenerateRandomBitrates() []traffic.Bitrate {
 }
 
 func (p Planner) GenerateSendSeconds() []traffic.Second {
+	var ss []traffic.Second
+
+	if p.SendSeconds > 0 {
+		for i := 0; i < p.CycleNum; i++ {
+			ss = append(ss, traffic.Second(p.SendSeconds))
+		}
+	} else {
+		ss = p.GenerateRandomSendSeconds()
+	}
+
+	return ss
+}
+
+func (p Planner) GenerateRandomSendSeconds() []traffic.Second {
 	ps := distuv.Exponential{
 		Rate: p.SendLambda,
 		Src:  rand.NewSource(p.Seed),
@@ -129,6 +147,22 @@ func (p Planner) GenerateSendSeconds() []traffic.Second {
 }
 
 func (p Planner) GenerateWaitMilliSeconds() []traffic.MilliSecond {
+	var ms []traffic.MilliSecond
+
+	if p.WaitSeconds > 0 {
+		for i := 0; i < p.CycleNum-1; i++ {
+			ms = append(ms, traffic.MilliSecond(p.WaitSeconds*1000))
+		}
+	} else {
+		ms = p.GenerateRandomWaitMilliSeconds()
+	}
+
+	zero := traffic.MilliSecond(0)
+	ms = append(ms, zero)
+	return ms
+}
+
+func (p Planner) GenerateRandomWaitMilliSeconds() []traffic.MilliSecond {
 	e := distuv.Exponential{
 		Rate: p.WaitLambda,
 		Src:  rand.NewSource(p.Seed),
@@ -139,7 +173,5 @@ func (p Planner) GenerateWaitMilliSeconds() []traffic.MilliSecond {
 		m := traffic.MilliSecond(e.Rand() * 1000)
 		ms = append(ms, m)
 	}
-	zero := traffic.MilliSecond(0)
-	ms = append(ms, zero)
 	return ms
 }
