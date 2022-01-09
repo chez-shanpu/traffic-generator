@@ -24,7 +24,7 @@ const (
 )
 
 type Config struct {
-	Bitrate       float64
+	Bitrate       string
 	BitrateLambda float64
 	BitrateUnit   string
 	Cycle         int
@@ -45,7 +45,7 @@ type Config struct {
 }
 
 func (c *Config) Populate() {
-	c.Bitrate = viper.GetFloat64(Bitrate)
+	c.Bitrate = viper.GetString(Bitrate)
 	c.BitrateLambda = viper.GetFloat64(BitrateLambda)
 	c.BitrateUnit = viper.GetString(BitrateUnit)
 	c.Cycle = viper.GetInt(Cycle)

@@ -40,7 +40,7 @@ type Planner struct {
 	SendSeconds   int64
 	WaitLambda    float64
 	WaitSeconds   int64
-	Bitrate       float64
+	Bitrate       string
 	BitrateLambda float64
 	BitrateUnit   string
 }
@@ -80,9 +80,9 @@ func (p *Planner) GenerateTrafficParams() traffic.Params {
 func (p *Planner) GenerateBitrates() []traffic.Bitrate {
 	var bs []traffic.Bitrate
 
-	if p.Bitrate != 0 {
+	if len(p.Bitrate) != 0 {
 		for i := 0; i < p.CycleNum; i++ {
-			bs = append(bs, traffic.Bitrate(strconv.FormatFloat(p.Bitrate, 'f', -1, 64)))
+			bs = append(bs, traffic.Bitrate(p.Bitrate))
 		}
 	} else {
 		bs = p.GenerateRandomBitrates()
